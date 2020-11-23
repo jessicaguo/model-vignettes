@@ -13,6 +13,7 @@
 # ----------------------------------------------------------------------
 library(PEcAn.all)
 library(PEcAn.utils)
+# library(PEcAn.DB)
 library(RCurl)
 
 # make sure always to call status.end
@@ -34,7 +35,7 @@ options(error=quote({
 # Open and read in settings file for PEcAn run.
 args <- commandArgs(trailingOnly = TRUE)
 if (is.na(args[1])){
-  settings <- PEcAn.settings::read.settings("pecan.xml") 
+  settings <- PEcAn.settings::read.settings("temp.exps1.xml") 
 } else {
   settings.file <- args[1]
   settings <- PEcAn.settings::read.settings(settings.file)
@@ -74,33 +75,30 @@ if (length(which(commandArgs() == "--continue")) == 0 && file.exists(statusFile)
 settings <- PEcAn.workflow::do_conversions(settings)
 
 # Query the trait database for data and priors
-if (PEcAn.utils::status.check("TRAIT") == 0){
-  PEcAn.utils::status.start("TRAIT")
-  settings <- PEcAn.workflow::runModule.get.trait.data(settings)
-  PEcAn.settings::write.settings(settings, outputfile='pecan.TRAIT.xml')
-  PEcAn.utils::status.end()
-} else if (file.exists(file.path(settings$outdir, 'pecan.TRAIT.xml'))) {
-  settings <- PEcAn.settings::read.settings(file.path(settings$outdir, 'pecan.TRAIT.xml'))
-}
+PEcAn.utils::status.start("TRAIT")
+settings <- PEcAn.workflow::runModule.get.trait.data(settings)
+PEcAn.settings::write.settings(settings, outputfile='pecan.TRAIT.xml')
+PEcAn.utils::status.end()
 
-library(dplyr)
-trait <- read.csv("temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv") %>%
-  filter(mean < 25)
-write.csv(trait, "temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv")
 
-load("temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
-file.remove("temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
-trait.data$Vcmax <- trait.data$Vcmax[4:15,]
-save(trait.data, file = "temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
+# library(dplyr)
+# trait <- read.csv("temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv") %>%
+#   filter(mean < 25)
+# write.csv(trait, "temp_exps_results1/pft/SetariaWT_ME034/trait.data.csv")
+
+# load("temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
+# file.remove("temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
+# trait.data$Vcmax <- trait.data$Vcmax[4:15,]
+# save(trait.data, file = "temp_exps_results1/pft/SetariaWT_ME034/trait.data.Rdata")
 
 # Run the PEcAn meta.analysis
-if(!is.null(settings$meta.analysis)) {
-  if (PEcAn.utils::status.check("META") == 0){
-    PEcAn.utils::status.start("META")
+# if(!is.null(settings$meta.analysis)) {
+#   if (PEcAn.utils::status.check("META") == 0){
+#     PEcAn.utils::status.start("META")
     PEcAn.MA::runModule.run.meta.analysis(settings)
-    PEcAn.utils::status.end()
-  }
-}
+#     PEcAn.utils::status.end()
+#   }
+# }
 
 # Write model specific configs
 if (PEcAn.utils::status.check("CONFIG") == 0){
