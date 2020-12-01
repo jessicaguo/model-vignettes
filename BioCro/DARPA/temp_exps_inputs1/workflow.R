@@ -11,20 +11,24 @@
 # ----------------------------------------------------------------------
 # Load required libraries
 # ----------------------------------------------------------------------
+# debugonce(PEcAn.MA::single.MA)
+# debugonce(get.trait.data)
+
 library(PEcAn.all)
 library(PEcAn.utils)
 # library(PEcAn.DB)
 library(RCurl)
 
+
 # make sure always to call status.end
-options(warn=1)
-options(error=quote({
-  PEcAn.utils::status.end("ERROR")
-  PEcAn.remote::kill.tunnel(settings)
-  if (!interactive()) {
-    q(status = 1)
-  }
-}))
+# options(warn=1)
+# options(error=quote({
+#   PEcAn.utils::status.end("ERROR")
+#   PEcAn.remote::kill.tunnel(settings)
+#   if (!interactive()) {
+#     q(status = 1)
+#   }
+# }))
 
 #options(warning.expression=status.end("ERROR"))
 
@@ -33,31 +37,31 @@ options(error=quote({
 # PEcAn Workflow
 # ----------------------------------------------------------------------
 # Open and read in settings file for PEcAn run.
-args <- commandArgs(trailingOnly = TRUE)
-if (is.na(args[1])){
-  settings <- PEcAn.settings::read.settings("temp.exps1.xml") 
-} else {
-  settings.file <- args[1]
-  settings <- PEcAn.settings::read.settings(settings.file)
-}
+# args <- commandArgs(trailingOnly = TRUE)
+# if (is.na(args[1])){
+  settings <- PEcAn.settings::read.settings("~/model-vignettes/BioCro/DARPA/temp_exps_inputs1/temp.exps1.xml")
+# } else {
+#   settings.file <- args[1]
+#   settings <- PEcAn.settings::read.settings(settings.file)
+# }
 
 # Check for additional modules that will require adding settings
-if("benchmarking" %in% names(settings)){
-  library(PEcAn.benchmark)
-  settings <- papply(settings, read_settings_BRR)
-}
+# if("benchmarking" %in% names(settings)){
+#   library(PEcAn.benchmark)
+#   settings <- papply(settings, read_settings_BRR)
+# }
 
-if("sitegroup" %in% names(settings)){
-  if(is.null(settings$sitegroup$nSite)){
-    settings <- PEcAn.settings::createSitegroupMultiSettings(settings, 
-                                                             sitegroupId = settings$sitegroup$id)
-  } else {
-    settings <- PEcAn.settings::createSitegroupMultiSettings(settings, 
-                                                             sitegroupId = settings$sitegroup$id,
-                                                             nSite = settings$sitegroup$nSite)
-  }
-  settings$sitegroup <- NULL ## zero out so don't expand a second time if re-reading
-}
+# if("sitegroup" %in% names(settings)){
+#   if(is.null(settings$sitegroup$nSite)){
+#     settings <- PEcAn.settings::createSitegroupMultiSettings(settings, 
+#                                                              sitegroupId = settings$sitegroup$id)
+#   } else {
+#     settings <- PEcAn.settings::createSitegroupMultiSettings(settings, 
+#                                                              sitegroupId = settings$sitegroup$id,
+#                                                              nSite = settings$sitegroup$nSite)
+#   }
+#   settings$sitegroup <- NULL ## zero out so don't expand a second time if re-reading
+# }
 
 # Update/fix/check settings. Will only run the first time it's called, unless force=TRUE
 settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
@@ -66,19 +70,20 @@ settings <- PEcAn.settings::prepare.settings(settings, force = FALSE)
 PEcAn.settings::write.settings(settings, outputfile = "pecan.CHECKED.xml")
 
 # start from scratch if no continue is passed in
-statusFile <- file.path(settings$outdir, "STATUS")
-if (length(which(commandArgs() == "--continue")) == 0 && file.exists(statusFile)) {
-  file.remove(statusFile)
-}
+# statusFile <- file.path(settings$outdir, "STATUS")
+# if (length(which(commandArgs() == "--continue")) == 0 && file.exists(statusFile)) {
+#   file.remove(statusFile)
+# }
 
 # Do conversions
 settings <- PEcAn.workflow::do_conversions(settings)
 
 # Query the trait database for data and priors
-PEcAn.utils::status.start("TRAIT")
+# PEcAn.utils::status.start("TRAIT")
+settings$meta.analysis$update <- TRUE
 settings <- PEcAn.workflow::runModule.get.trait.data(settings)
 PEcAn.settings::write.settings(settings, outputfile='pecan.TRAIT.xml')
-PEcAn.utils::status.end()
+# PEcAn.utils::status.end()
 
 
 # library(dplyr)

@@ -1,0 +1,120 @@
+---
+title: "Updated meta-analysis plots"
+author: "Jessica Guo"
+date: "11/24/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/home/jessicaguo/model-vignettes/BioCro/DARPA/temp_exps_results1/pft/SetariaWT_ME034')
+```
+
+Load libraries
+
+```{r library}
+options(scipen=999)
+library(data.table)
+library(ggplot2)
+library(ggmcmc)
+library(ggridges)
+library(postjags)
+library(dplyr)
+library(coda)
+```
+
+## Gather data
+
+Prior distributions, data, and posterior chains
+
+```{r data}
+load("trait.data.Rdata") # list of n dataframes, where n = number of traits
+load('prior.distns.Rdata') # dataframe of priors for 8 traits
+# load('post.distns.MA.Rdata')
+load('trait.mcmc.Rdata') # list of n mcmc.list objects (4 chains)
+```
+
+Number of traits is determined by length of trait.data. 
+
+```{r}
+for(t in names(trait.data)){
+  t = "stomatal_slope.BB"
+  dat <- as.data.table(trait.data[[which(names(trait.data) == t)]])
+  #output a table of numbers corresponding to each site/trt combo
+  dat2 <- dat[, .(ghs = unique(greenhouse),
+                  site = unique(site_id),
+                  trt = unique(treatment_id)), by = .(name)]
+  dat3 <- dat2[, .(name = name,
+                   ghs = as.integer(factor(ghs)),
+                   site = as.integer(factor(site)),
+                   trt = as.integer(factor(trt))), ]
+  dat4 <- dat3 %>% mutate(ghs = case_when(ghs == 2 ~ "control",
+                                          ghs == 1 ~ "2"),
+                          site = case_when(site == 2 ~ "1",
+                                           site == 1 ~ "2",
+                                           site == 3 ~ "3"),
+                          trt = case_when(trt == 4 ~ "control",
+                                          trt == 3 ~ "2",
+                                          trt == 2 ~ "control",
+                                          trt == 1 ~ "4", 
+                                          trt == 5 ~ "control",
+                                          trt == 6 ~ ""))
+    
+  #combine 4 chains into single matrix
+  mc.list <- do.call(rbind, trait.mcmc[[which(names(trait.mcmc) == t)]])
+  cnames <- colnames(mc.list)
+  
+  #link dat4 to column names
+  dat5 <- matrix(NA, ncol = ncol(dat4) - 1, nrow = nrow(dat4))
+  for(i in 1:nrow(dat4)){
+    for(j in 1:ncol(dat4)-1){
+      dat5[i,j] <- if(length(which(cnames == paste0("beta.", colnames(dat4)[j+1], "[", dat4[i,j+1], "]"))) == 1){
+        which(cnames == paste0("beta.", colnames(dat4)[j+1], "[", dat4[i,j+1], "]"))} else {NA}
+    }
+  }
+  
+  #empirical means
+  tapply(dat$mean, dat$name, FUN = mean)
+  #posterior means
+  sum.mcmc <- coda.fast(trait.mcmc[[which(names(trait.mcmc) == t)]])
+
+  #create 6 columns that correctly combine RE, name with same names as dat
+  mc.int <- matrix(NA, ncol = nrow(dat4), nrow = nrow(mc.list))
+  for(i in 1:nrow(dat4)){
+    cnames <- colnames(mc.list)
+    which(dat4[i,] != "control")
+    mc.int[,i ] <- rowSums(mc.list[ ,c(2,dat5[i,])], na.rm = T)
+  }
+  mc.out <- data.frame(name = rep(dat4$name, each = nrow(mc.int)),
+                       value = c(mc.int))
+  
+  #add iterations for prior - how to pick correct distribution?
+  mc.out <- rbind.data.frame(mc.out,
+                             data.frame(name = rep("prior", each = nrow(mc.int)),
+                                        value = rweibull(nrow(mc.int), 
+                                                            prior_distns$parama[which(prior_distns$X1 == t)],
+                                                            prior_distns$paramb[which(prior_distns$X1 == t)])))
+  
+  #factors to order output facets
+  mc.out$name <- factor(mc.out$name, levels = c("prior", "high night temperature", "regular night temperature", 
+                                              "high light", "greenhouse", "outdoor 5 cm density", "outdoor JollyG soil"))
+  dat$name <- factor(dat$name, levels = c("prior", "high night temperature", "regular night temperature", 
+                                              "high light", "greenhouse", "outdoor 5 cm density", "outdoor JollyG soil"))
+  fig1 <- ggplot()+
+        stat_density(data = mc.out, aes(x = value), geom = "line")+
+        geom_rug(data = dat, aes(x = mean), color = "red")+
+        facet_wrap(~name, ncol = 1, scales = "free_y")+
+        theme_bw(base_size = 12)+
+        scale_y_continuous(t, expand = c(0.2, 0.2))
+  
+  jpeg(filename = paste0("plots/post_", t , ".jpg"), height = 5, width = 3, units = "in", res = 600)
+  print(fig1)
+  dev.off
+}
+```
+
+```{r}
+
+```
