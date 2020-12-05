@@ -19,6 +19,11 @@ library(PEcAn.utils)
 # library(PEcAn.DB)
 library(RCurl)
 
+#for testing edits to pecan
+devtools::load_all("/home/jessicaguo/pecan/base/utils")
+devtools::load_all("/home/jessicaguo/pecan/base/db")
+devtools::load_all("/home/jessicaguo/pecan/modules/meta.analysis")
+
 
 # make sure always to call status.end
 # options(warn=1)
@@ -100,6 +105,12 @@ PEcAn.settings::write.settings(settings, outputfile='pecan.TRAIT.xml')
 # if(!is.null(settings$meta.analysis)) {
 #   if (PEcAn.utils::status.check("META") == 0){
 #     PEcAn.utils::status.start("META")
+# debugonce(PEcAn.MA:::run.meta.analysis.pft)
+# debugonce(single.MA)
+# debugonce(pecan.ma)
+# debugonce(jagify)
+# debugonce(PEcAn.MA::runModule.run.meta.analysis)
+
     PEcAn.MA::runModule.run.meta.analysis(settings)
 #     PEcAn.utils::status.end()
 #   }

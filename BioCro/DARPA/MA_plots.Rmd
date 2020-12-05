@@ -23,6 +23,7 @@ library(ggridges)
 library(postjags)
 library(dplyr)
 library(coda)
+library(PEcAn.priors)#create.density.df, pr.samp
 ```
 
 ## Gather data
@@ -39,8 +40,8 @@ load('trait.mcmc.Rdata') # list of n mcmc.list objects (4 chains)
 Number of traits is determined by length of trait.data. 
 
 ```{r}
-for(t in names(trait.data)){
-  t = "stomatal_slope.BB"
+test <- names(trait.data)[c(1,3,5)]
+for(t in test){
   dat <- as.data.table(trait.data[[which(names(trait.data) == t)]])
   #output a table of numbers corresponding to each site/trt combo
   dat2 <- dat[, .(ghs = unique(greenhouse),
@@ -60,7 +61,7 @@ for(t in names(trait.data)){
                                           trt == 2 ~ "control",
                                           trt == 1 ~ "4", 
                                           trt == 5 ~ "control",
-                                          trt == 6 ~ ""))
+                                          trt == 6 ~ "3"))
     
   #combine 4 chains into single matrix
   mc.list <- do.call(rbind, trait.mcmc[[which(names(trait.mcmc) == t)]])
@@ -91,11 +92,12 @@ for(t in names(trait.data)){
                        value = c(mc.int))
   
   #add iterations for prior - how to pick correct distribution?
+  #return(do.call(paste0("r", distn), list(n, parama, paramb))) <- pr.samp
   mc.out <- rbind.data.frame(mc.out,
                              data.frame(name = rep("prior", each = nrow(mc.int)),
                                         value = rweibull(nrow(mc.int), 
-                                                            prior_distns$parama[which(prior_distns$X1 == t)],
-                                                            prior_distns$paramb[which(prior_distns$X1 == t)])))
+                                                            prior.distns$parama[which(row.names(prior.distns) == t)],
+                                                            prior.distns$paramb[which(row.names(prior.distns) == t)])))
   
   #factors to order output facets
   mc.out$name <- factor(mc.out$name, levels = c("prior", "high night temperature", "regular night temperature", 
@@ -106,12 +108,12 @@ for(t in names(trait.data)){
         stat_density(data = mc.out, aes(x = value), geom = "line")+
         geom_rug(data = dat, aes(x = mean), color = "red")+
         facet_wrap(~name, ncol = 1, scales = "free_y")+
-        theme_bw(base_size = 12)+
+        theme_bw(base_size = 10)+
         scale_y_continuous(t, expand = c(0.2, 0.2))
   
   jpeg(filename = paste0("plots/post_", t , ".jpg"), height = 5, width = 3, units = "in", res = 600)
   print(fig1)
-  dev.off
+  dev.off()
 }
 ```
 
